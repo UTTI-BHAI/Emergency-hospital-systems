@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedResponse - Doctor Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class'
+    }
+  </script>
+  <style>
+    :root { --bg: #f8fafc; --card: #ffffff; --text: #0f172a; --border: #e2e8f0; --muted: #64748b; }
+    .dark { --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --border: #334155; --muted: #94a3b8; }
+    body { background: var(--bg); color: var(--text); transition: background 0.2s, color 0.2s; }
+    .card { background: var(--card); border-color: var(--border); }
+    .input-field { background: var(--card); border-color: var(--border); color: var(--text); }
+    .muted { color: var(--muted); }
+    .new-patient { border-left: 4px solid #ef4444; }
+    .accepted-patient { border-left: 4px solid #22c55e; }
+    .completed-patient { border-left: 4px solid #94a3b8; opacity: 0.7; }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+  <div class="max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-8">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold">Doctor Dashboard</h1>
+          <p class="muted text-sm">Manage your patients</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="themeToggle" class="p-2 rounded-lg border card hover:opacity-80">
+          <svg id="sunIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+          </svg>
+          <svg id="moonIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+          </svg>
+        </button>
+        <a href="index.html" class="px-4 py-2 text-sm border rounded-lg card hover:opacity-80">Emergency Panel</a>
+      </div>
+    </div>
+
+    <!-- New Patient Alert Banner -->
+    <div id="newPatientAlert" class="hidden mb-4 bg-red-600 text-white p-4 rounded-xl flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+        <span class="font-semibold">New Patient Assigned!</span>
+        <span id="newPatientInfo" class="text-red-100"></span>
+      </div>
+      <button onclick="dismissAlert()" class="p-1 hover:bg-red-700 rounded">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div id="loginSection" class="card border rounded-xl p-6 shadow-sm mb-6">
+      <h2 class="text-lg font-semibold mb-4">Doctor Login</h2>
+      <div class="flex gap-3">
+        <input id="doctorId" type="number" placeholder="Enter Doctor ID (1, 2, or 3)" class="input-field flex-1 p-3 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        <button onclick="loadDoctor()" class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700">Load</button>
+      </div>
+      <p class="muted text-sm mt-2">Doctors: 1 (Dr A1), 2 (Dr A2), 3 (Dr B1)</p>
+    </div>
+
+    <div id="doctorInfo" class="hidden card border rounded-xl p-6 shadow-sm mb-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-semibold">Welcome, <span id="doctorNameDisplay">Doctor</span></h2>
+          <p class="muted text-sm">Hospital: <span id="hospitalName"></span> | Status: <span id="currentStatus" class="font-medium"></span></p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="setAvailable()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700">Mark Available</button>
+          <button onclick="loadPatients()" class="p-2 rounded-lg border card hover:opacity-80" title="Refresh">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="patientsSection" class="hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold">Assigned Patients</h2>
+        <span id="patientCount" class="px-3 py-1 text-sm rounded-full bg-indigo-100 text-indigo-800"></span>
+      </div>
+      <div id="patientsList" class="space-y-4"></div>
+      <div id="noPatients" class="hidden card border rounded-xl p-8 text-center">
+        <svg class="w-12 h-12 mx-auto muted mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+        </svg>
+        <p class="muted">No patients assigned yet</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentDoctorId = null;
+    let currentDoctorInfo = null;
+    let knownPatientIds = new Set();
+    let isFirstLoad = true;
+
+    // Dark mode toggle
+    const themeToggle = document.getElementById('themeToggle');
+    const sunIcon = document.getElementById('sunIcon');
+    const moonIcon = document.getElementById('moonIcon');
+
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+      sunIcon.classList.remove('hidden');
+      moonIcon.classList.add('hidden');
+    }
+
+    themeToggle.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+      const isDark = document.documentElement.classList.contains('dark');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      sunIcon.classList.toggle('hidden', !isDark);
+      moonIcon.classList.toggle('hidden', isDark);
+    });
+
+    function getSeverityColor(severity) {
+      const colors = {
+        low: 'bg-green-100 text-green-800',
+        medium: 'bg-yellow-100 text-yellow-800',
+        high: 'bg-orange-100 text-orange-800',
+        critical: 'bg-red-100 text-red-800'
+      };
+      return colors[severity] || colors.medium;
+    }
+
+    function getStatusBadge(status) {
+      const badges = {
+        pending: '<span class="px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-800">PENDING</span>',
+        accepted: '<span class="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-800">ACCEPTED</span>',
+        completed: '<span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800">COMPLETED</span>'
+      };
+      return badges[status] || badges.pending;
+    }
+
+    function getPatientCardClass(status, isNew) {
+      if (status === 'completed') return 'completed-patient';
+      if (status === 'accepted') return 'accepted-patient';
+      if (isNew || status === 'pending') return 'new-patient';
+      return '';
+    }
+
+    function dismissAlert() {
+      document.getElementById('newPatientAlert').classList.add('hidden');
+    }
+
+    function showNewPatientAlert(patient) {
+      const alert = document.getElementById('newPatientAlert');
+      document.getElementById('newPatientInfo').textContent = `Patient #${patient.id} - ${patient.severity.toUpperCase()} ${patient.type}`;
+      alert.classList.remove('hidden');
+      
+      setTimeout(() => {
+        alert.classList.add('hidden');
+      }, 10000);
+    }
+
+    async function acceptPatient(patientId) {
+      const res = await fetch('http://localhost:3000/patient/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId, doctorId: currentDoctorId })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        loadPatients();
+      } else {
+        alert('Failed to accept patient');
+      }
+    }
+
+    async function completePatient(patientId) {
+      if (!confirm('Mark this patient as treated/completed?')) return;
+      
+      const res = await fetch('http://localhost:3000/patient/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId, doctorId: currentDoctorId })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        loadPatients();
+      } else {
+        alert('Failed to complete patient');
+      }
+    }
+
+    async function loadDoctor() {
+      const id = document.getElementById('doctorId').value;
+      if (!id) return alert('Please enter a Doctor ID');
+      
+      currentDoctorId = parseInt(id);
+      
+      const res = await fetch(`http://localhost:3000/doctor/${currentDoctorId}`);
+      const data = await res.json();
+      
+      if (!data.doctor) {
+        alert('Doctor not found!');
+        return;
+      }
+      
+      currentDoctorInfo = data;
+      
+      document.getElementById('loginSection').classList.add('hidden');
+      document.getElementById('doctorInfo').classList.remove('hidden');
+      document.getElementById('patientsSection').classList.remove('hidden');
+      document.getElementById('doctorNameDisplay').textContent = data.doctor.name;
+      document.getElementById('hospitalName').textContent = data.hospital.name;
+      document.getElementById('currentStatus').textContent = data.doctor.status.toUpperCase();
+      document.getElementById('currentStatus').className = data.doctor.status === 'available' 
+        ? 'font-medium text-green-600' 
+        : 'font-medium text-red-600';
+      
+      isFirstLoad = true;
+      knownPatientIds.clear();
+      loadPatients();
+      
+      setInterval(loadPatients, 3000);
+    }
+
+    async function loadPatients() {
+      if (!currentDoctorId) return;
+      
+      const docRes = await fetch(`http://localhost:3000/doctor/${currentDoctorId}`);
+      const docData = await docRes.json();
+      if (docData.doctor) {
+        document.getElementById('currentStatus').textContent = docData.doctor.status.toUpperCase();
+        document.getElementById('currentStatus').className = docData.doctor.status === 'available' 
+          ? 'font-medium text-green-600' 
+          : 'font-medium text-red-600';
+      }
+      
+      const res = await fetch(`http://localhost:3000/doctor/patients/${currentDoctorId}`);
+      const data = await res.json();
+
+      const list = document.getElementById('patientsList');
+      const noPatients = document.getElementById('noPatients');
+      const patientCount = document.getElementById('patientCount');
+
+      const newPatients = [];
+      data.patients.forEach(p => {
+        if (!knownPatientIds.has(p.id)) {
+          if (!isFirstLoad) {
+            newPatients.push(p);
+          }
+          knownPatientIds.add(p.id);
+        }
+      });
+
+      if (newPatients.length > 0) {
+        showNewPatientAlert(newPatients[newPatients.length - 1]);
+      }
+
+      isFirstLoad = false;
+
+      const activePatients = data.patients.filter(p => p.status !== 'completed');
+
+      if (data.patients.length === 0) {
+        list.innerHTML = '';
+        noPatients.classList.remove('hidden');
+        patientCount.textContent = '0 patients';
+      } else {
+        noPatients.classList.add('hidden');
+        patientCount.textContent = `${activePatients.length} active, ${data.patients.length} total`;
+        
+        const sortedPatients = [...data.patients].sort((a, b) => {
+          const statusOrder = { pending: 0, accepted: 1, completed: 2 };
+          if (statusOrder[a.status] !== statusOrder[b.status]) {
+            return statusOrder[a.status] - statusOrder[b.status];
+          }
+          return b.id - a.id;
+        });
+        
+        list.innerHTML = sortedPatients.map((p) => {
+          const isNew = newPatients.some(np => np.id === p.id);
+          const cardClass = getPatientCardClass(p.status, isNew);
+          
+          return `
+            <div class="card border rounded-xl p-5 shadow-sm ${cardClass}">
+              <div class="flex items-start justify-between">
+                <!-- Left side: Patient info -->
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 flex-wrap mb-2">
+                    <span class="font-mono font-bold text-lg">Patient #${p.id}</span>
+                    ${getStatusBadge(p.status)}
+                    ${isNew ? '<span class="px-2 py-0.5 text-xs rounded-full bg-red-600 text-white">NEW</span>' : ''}
+                    <span class="px-2 py-1 text-xs rounded-full ${getSeverityColor(p.severity)}">${p.severity.toUpperCase()}</span>
+                    <span class="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-800">${p.type}</span>
+                  </div>
+                  <p class="muted mb-4">${p.description || 'No description provided'}</p>
+                  <div class="flex items-center gap-2">
+                    ${p.status !== 'completed' ? `
+                      <a href="chat.html?patientId=${p.id}&role=doctor" class="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                        </svg>
+                        Open Chat
+                      </a>
+                    ` : `
+                      <span class="text-sm muted">Patient treated</span>
+                    `}
+                    ${p.status === 'accepted' ? `
+                      <button onclick="completePatient(${p.id})" class="inline-flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-700">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Mark Complete
+                      </button>
+                    ` : ''}
+                  </div>
+                </div>
+                
+                <!-- Right side: Accept/Complete button -->
+                <div class="ml-4 flex-shrink-0">
+                  ${p.status === 'pending' ? `
+  <div class="flex gap-2">
+    <button onclick="acceptPatient(${p.id})" class="inline-flex items-center gap-2 bg-green-600 text-white px-5 py-3 rounded-lg text-sm font-medium hover:bg-green-700">
+      Accept
+    </button>
+    <button onclick="rejectPatient(${p.id})" class="inline-flex items-center gap-2 bg-red-600 text-white px-5 py-3 rounded-lg text-sm font-medium hover:bg-red-700">
+      Reject
+    </button>
+  </div> class="inline-flex items-center gap-2 bg-green-600 text-white px-5 py-3 rounded-lg text-sm font-medium hover:bg-green-700">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                      </svg>
+                      Accept
+                    </button>
+                  ` : ''}
+                  ${p.status === 'accepted' ? `
+                    <span class="inline-flex items-center gap-2 text-green-600 font-medium">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                      Accepted
+                    </span>
+                  ` : ''}
+                  ${p.status === 'completed' ? `
+                    <span class="inline-flex items-center gap-2 muted font-medium">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                      </svg>
+                      Done
+                    </span>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        if (newPatients.length > 0) {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
+    }
+
+    async function setAvailable() {
+      if (!currentDoctorId) return;
+      await fetch('http://localhost:3000/doctor/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ doctorId: currentDoctorId, status: 'available' })
+      });
+      document.getElementById('currentStatus').textContent = 'AVAILABLE';
+      document.getElementById('currentStatus').className = 'font-medium text-green-600';
+      alert('Status updated to Available!');
+      async function rejectPatient(patientId) {
+  if (!confirm('Reject this patient?')) return;
+
+  const res = await fetch('http://localhost:3000/patient/reject', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ patientId, doctorId: currentDoctorId })
+  });
+
+      const data = await res.json();
+
+      if (data.ok) loadPatients();
+      else alert('Failed to reject patient');
+    }
+    }
+  </script>
+</body>
+</html>
